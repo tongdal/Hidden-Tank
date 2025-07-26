@@ -25,7 +25,7 @@ public class Spawner : MonoBehaviour
         if (hit.collider != null) {
             Vector2 spawnPosition = hit.point;
             Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
-
+            Debug.LogWarning("利 攀农 积己 己傍");
         }
         else {
             Debug.LogWarning("利 攀农 积己 角菩: 顶阑 茫瘤 给窃");

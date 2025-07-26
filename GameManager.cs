@@ -3,7 +3,6 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine.SceneManagement;
-using UnityEngine.UIElements;
 
 public class GameManager : MonoBehaviour
 {
@@ -31,16 +30,26 @@ public class GameManager : MonoBehaviour
     public Wall wall;
     public Enemy enemy;
     public Border border;
+    public StageMessage stageMessage;
 
     [Header("# Stage Info")]
     public List<StageConfig> stages;
+
+    public enum Difficulty { Normal, Hard }
+    public Difficulty selDifficult;
 
     void Awake()
     {
         //disText = GetComponent<Text>();
         instance = this;
     }
-    
+
+    public void OnDifficultySelected(int difficulty)
+    {
+        selDifficult = (Difficulty)difficulty;
+        GameStart();
+    }
+
     public void GameStart()
     {
         curGold = initGold;
@@ -95,6 +104,7 @@ public class GameManager : MonoBehaviour
     public void NextStage()
     {
         if (++curStage < stages.Count) {
+            curBullet += 2;
             LoadStage(curStage);
             spawner.SpawnEnemy();
         }
@@ -108,12 +118,15 @@ public class GameManager : MonoBehaviour
     {
         player.curBulletStage = 0;
         StageConfig cfg = stages[idx];
-        // 1) 힌트  셋팅
-        if (cfg.hintType == HintType.DirectionOnly)
-            hintType = false;
-        else 
-            hintType = true;
 
+        // 1) 힌트  셋팅
+        if (selDifficult == Difficulty.Normal) {
+            if (cfg.hintType == HintType.DirectionOnly)
+                hintType = false;
+            else
+                hintType = true;
+        }
+        else { hintType = false; }
         // 2) 맵사이즈 셋팅
         border.ResizeMap(cfg);
 
@@ -122,6 +135,7 @@ public class GameManager : MonoBehaviour
 
         // 4) 벽 높이 세팅
         wall.RandomMakeWall(cfg);
+        stageMessage.ShowStageMessage(idx + 1);
         Debug.Log($"Stage {idx + 1} 로드: {cfg.hintType}, Map={cfg.mapSize}, Tank={cfg.tankSize}, Wall={cfg.wallHeight}");
     }
 
@@ -170,19 +184,23 @@ public class GameManager : MonoBehaviour
     IEnumerator Miss()
     {
         GameManager.instance.player.isFire = true;
-        if (hintType) {
-            disText.text = string.Format("{0:F2}m", Mathf.Abs(distance)); }
-        if (distance < 0) {
-            ToggleFlip(true); }
+        if (curGold <= 0) { GameOver(); }
+        else {
+            if (hintType) { disText.text = string.Format("{0:F2}m", Mathf.Abs(distance)); }
+            else { disText.text = null;  }
 
-        uiResult.gameObject.SetActive(true);
-        uiResult.MissOn();
-        yield return new WaitForSeconds(2f);
-        uiResult.gameObject.SetActive(false);
-        uiResult.MissOff();
-        //방향 초기화
-        ToggleFlip(false);
-        if ( curGold <= 0) GameOver();
+            if (distance < 0) {
+                ToggleFlip(true);
+            }
+
+            uiResult.gameObject.SetActive(true);
+            uiResult.MissOn();
+            yield return new WaitForSeconds(2f);
+            uiResult.gameObject.SetActive(false);
+            uiResult.MissOff();
+            //방향 초기화
+            ToggleFlip(false);
+        }
     }
     public void CheckDistances(Vector3 explosionPos)
     {
